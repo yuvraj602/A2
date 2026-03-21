@@ -57,6 +57,9 @@ def update_book(isbn: str):
     if not valid:
         return jsonify({"message": "Illegal, missing, or malformed input."}), 400
 
+    if normalized["ISBN"] != isbn:
+        return jsonify({"message": "Illegal, missing, or malformed input."}), 400
+
     book = db.session.get(Book, isbn)
     if book is None:
         return "", 404

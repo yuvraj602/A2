@@ -25,6 +25,9 @@ def validate_price(value: object) -> Decimal | None:
     except (InvalidOperation, ValueError):
         return None
 
+    if dec < 0:
+        return None
+
     if dec.as_tuple().exponent < -2:
         return None
 
