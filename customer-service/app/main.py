@@ -18,12 +18,34 @@ def status() -> Response:
     return Response("OK", status=200, content_type="text/plain")
 
 
+def _customer_bad_request():
+    return jsonify({"message": "Illegal, missing, or malformed input."}), 400
+
+
+@app.get("/customers")
+def get_customer_by_userid():
+    user_id = request.args.get("userId")
+    if not user_id:
+        return _customer_bad_request()
+
+    try:
+        normalized_user_id = validate_email(user_id, check_deliverability=False).email
+    except EmailNotValidError:
+        return _customer_bad_request()
+
+    customer = Customer.query.filter_by(user_id=normalized_user_id).first()
+    if customer is None:
+        return "", 404
+
+    return jsonify(customer.to_dict()), 200
+
+
 @app.post("/customers")
 def add_customer():
     payload = request.get_json(silent=True)
     valid, normalized = validate_customer_payload(payload)
     if not valid:
-        return jsonify({"message": "Illegal, missing, or malformed input."}), 400
+        return _customer_bad_request()
 
     existing = Customer.query.filter_by(user_id=normalized["userId"]).first()
     if existing is not None:
@@ -44,37 +66,24 @@ def add_customer():
 
     response = jsonify(customer.to_dict())
     response.status_code = 201
-    response.headers["Location"] = url_for("get_customer_by_id", customer_id=customer.id, _external=True)
+    response.headers["Location"] = url_for("customer_path_tail", tail=str(customer.id), _external=True)
     return response
 
 
-@app.get("/customers/<string:customer_id>")
-def get_customer_by_id(customer_id: str):
-    if not customer_id.isdigit():
-        return jsonify({"message": "Illegal, missing, or malformed input."}), 400
+@app.route("/customers/<path:tail>", methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"])
+def customer_path_tail(tail: str):
+    if request.method not in ("GET", "HEAD"):
+        return _customer_bad_request()
 
-    customer = db.session.get(Customer, int(customer_id))
+    if "/" in tail or not tail.isdigit():
+        return _customer_bad_request()
+
+    customer = db.session.get(Customer, int(tail))
     if customer is None:
         return "", 404
 
-    return jsonify(customer.to_dict()), 200
-
-
-@app.get("/customers")
-def get_customer_by_userid():
-    user_id = request.args.get("userId")
-    if not user_id:
-        return jsonify({"message": "Illegal, missing, or malformed input."}), 400
-
-    try:
-        normalized_user_id = validate_email(user_id, check_deliverability=False).email
-    except EmailNotValidError:
-        return jsonify({"message": "Illegal, missing, or malformed input."}), 400
-
-    customer = Customer.query.filter_by(user_id=normalized_user_id).first()
-    if customer is None:
-        return "", 404
-
+    if request.method == "HEAD":
+        return Response(status=200, mimetype="application/json")
     return jsonify(customer.to_dict()), 200
 
 
