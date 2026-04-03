@@ -44,20 +44,15 @@ def add_customer():
 
     response = jsonify(customer.to_dict())
     response.status_code = 201
-    response.headers["Location"] = url_for("get_customer_by_id", customer_id=customer.id, _external=True)
+    response.headers["Location"] = url_for(
+        "get_customer_by_path", customer_path=str(customer.id), _external=True
+    )
     return response
 
 
-@app.get("/customers/<string:customer_id>")
-def get_customer_by_id(customer_id: str):
-    if not customer_id.isdigit():
-        return jsonify({"message": "Illegal, missing, or malformed input."}), 400
-
-    customer = db.session.get(Customer, int(customer_id))
-    if customer is None:
-        return "", 404
-
-    return jsonify(customer.to_dict()), 200
+@app.post("/customers/<path:invalid_post_path>")
+def add_customer_wrong_path(invalid_post_path: str) -> tuple:
+    return jsonify({"message": "Illegal, missing, or malformed input."}), 400
 
 
 @app.get("/customers")
@@ -72,6 +67,26 @@ def get_customer_by_userid():
         return jsonify({"message": "Illegal, missing, or malformed input."}), 400
 
     customer = Customer.query.filter_by(user_id=normalized_user_id).first()
+    if customer is None:
+        return "", 404
+
+    return jsonify(customer.to_dict()), 200
+
+
+@app.get("/customers/<path:customer_path>")
+def get_customer_by_path(customer_path: str):
+    if "/" in customer_path:
+        return jsonify({"message": "Illegal, missing, or malformed input."}), 400
+
+    customer_id = customer_path
+    if not customer_id.isdigit():
+        return jsonify({"message": "Illegal, missing, or malformed input."}), 400
+
+    cid = int(customer_id)
+    if cid < 1:
+        return jsonify({"message": "Illegal, missing, or malformed input."}), 400
+
+    customer = db.session.get(Customer, cid)
     if customer is None:
         return "", 404
 
