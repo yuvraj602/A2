@@ -14,6 +14,8 @@ from app.transforms import (
 )
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
+
 
 def _backend_base() -> str | None:
     base = os.getenv("URL_BASE_BACKEND_SERVICES", "").strip().rstrip("/")

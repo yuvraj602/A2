@@ -22,4 +22,6 @@ def create_app() -> Flask:
 
     db.init_app(app)
 
+    app.url_map.strict_slashes = False
+
     return app

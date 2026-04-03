@@ -8,6 +8,8 @@ from flask import Flask, Response, jsonify, request
 from app.jwt_validation import authorization_is_valid
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
+
 
 def _backend_base() -> str | None:
     base = os.getenv("URL_BASE_BACKEND_SERVICES", "").strip().rstrip("/")
